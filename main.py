@@ -37,48 +37,48 @@ class Chip8:
         self.registers['PC'] += 1
 
     def current(self):
-        return f"{self.program[self.registers['PC']]:x}".upper()
+        return self.program[self.registers['PC']]
 
     def interpret(self):
         while 1:
             instr = self.current()
 
-            if instr == '0':
+            if instr == 0x00:
                 self.increment()
 
-                if self.current() == "E0":
+                if self.current() == 0xE0:
                     #print("clear screen")
                     self.increment()
 
-            elif instr[0] == '6':
-                target_reg = int(instr[1], 16)
+            elif instr >> 4 == 0x6:
+                target_reg = instr & 0xF
 
                 self.increment()
-                self.registers['V'][target_reg] = int(self.current(), 16)
+                self.registers['V'][target_reg] = self.current()
 
                 #print(f"V[{target_reg}] = {hex( int(self.current()) )}")
                 self.increment()
 
-            elif instr[0] == 'A':
-                x1 = int(instr[1], 16)
+            elif instr >> 4 == 0xA:
+                x1 = instr & 0xF
 
                 self.increment()
-                x2 = int(self.current(), 16)
+                x2 = self.current()
 
-                self.registers['I'] = ( (x1 << 8) | x2 )
+                self.registers['I'] = (x1 << 8) | x2
 
                 #print(f"I = {self.registers['I']:x}")
                 self.increment()
 
-            elif instr[0] == 'D':
+            elif instr >> 4 == 0xD:
                 # get co-ordinates
-                x = self.registers['V'][int(instr[1])]
+                x = self.registers['V'][ instr & 0xF ]
 
                 self.increment()
-                y = self.registers['V'][int(self.current()[0], 16)]
+                y = self.registers['V'][ self.current() >> 4]
 
                 # load n-bytes sprite from memory location `I`
-                n = int(self.current()[1], 16)
+                n = self.current() & 0xF
 
                 sprite = self.program[self.registers['I'] - 0x1FF - 1 : self.registers['I'] - 0x1FF + n - 1]
 
