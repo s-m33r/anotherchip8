@@ -1,6 +1,7 @@
 import sys
 import curses
 
+
 class Display:
     def __init__(self):
         self.stdscr = curses.initscr()
@@ -22,6 +23,7 @@ class Display:
         self.stdscr.keypad(False)
         curses.echo()
         curses.endwin()
+
 
 class Chip8:
     def __init__(self, program, display):
@@ -47,7 +49,6 @@ class Chip8:
                 self.increment()
 
                 if self.current() == 0xE0:
-                    #print("clear screen")
                     self.increment()
 
             elif instr >> 4 == 0x6:
@@ -56,7 +57,14 @@ class Chip8:
                 self.increment()
                 self.registers['V'][target_reg] = self.current()
 
-                #print(f"V[{target_reg}] = {hex( int(self.current()) )}")
+                self.increment()
+
+            elif instr >> 4 == 0x7:
+                target_reg = instr & 0xF
+
+                self.increment()
+                self.registers['V'][target_reg] += self.current()
+
                 self.increment()
 
             elif instr >> 4 == 0xA:
@@ -67,7 +75,6 @@ class Chip8:
 
                 self.registers['I'] = (x1 << 8) | x2
 
-                #print(f"I = {self.registers['I']:x}")
                 self.increment()
 
             elif instr >> 4 == 0xD:
@@ -85,7 +92,6 @@ class Chip8:
                 # draw sprite at given coordinates
                 display.draw(sprite, y, x)
 
-                #print(f"draw {n}-long sprite at ({x},{y})")
                 self.increment()
 
 
