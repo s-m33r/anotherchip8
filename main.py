@@ -4,6 +4,47 @@ import time
 import random
 import os
 
+FONT = [
+    0xF0, 0x90, 0x90, 0x90, 0xF0, # 0
+    0x20, 0x60, 0x20, 0x20, 0x70, # 1
+    0xF0, 0x10, 0xF0, 0x80, 0xF0, # 2
+    0xF0, 0x10, 0xF0, 0x10, 0xF0, # 3
+    0x90, 0x90, 0xF0, 0x10, 0x10, # 4
+    0xF0, 0x80, 0xF0, 0x10, 0xF0, # 5
+    0xF0, 0x80, 0xF0, 0x90, 0xF0, # 6
+    0xF0, 0x10, 0x20, 0x40, 0x40, # 7
+    0xF0, 0x90, 0xF0, 0x90, 0xF0, # 8
+    0xF0, 0x90, 0xF0, 0x10, 0xF0, # 9
+    0xF0, 0x90, 0xF0, 0x90, 0x90, # A
+    0xE0, 0x90, 0xE0, 0x90, 0xE0, # B
+    0xF0, 0x80, 0x80, 0x80, 0xF0, # C
+    0xE0, 0x90, 0x90, 0x90, 0xE0, # D
+    0xF0, 0x80, 0xF0, 0x80, 0xF0, # E
+    0xF0, 0x80, 0xF0, 0x80, 0x80, # F
+]
+
+KEYMAP = {
+    '1': 0x1,
+    '2': 0x2,
+    '3': 0x3,
+    '4': 0xC,
+
+    'q': 0x4,
+    'w': 0x5,
+    'e': 0x6,
+    'r': 0xD,
+
+    'a': 0x7,
+    's': 0x8,
+    'd': 0x9,
+    'f': 0xE,
+
+    'z': 0xA,
+    'x': 0x0,
+    'c': 0xB,
+    'v': 0xF,
+}
+
 
 class Display:
     def __init__(self):
@@ -57,6 +98,9 @@ class Chip8:
         for i, byte in enumerate(program):
             self.memory[0x200 + i] = byte
 
+        for i, byte in enumerate(FONT):
+            self.memory[i] = byte
+
         self.display = display
 
         self.stack = []
@@ -69,27 +113,29 @@ class Chip8:
             'ST': 0
         }
 
-        self.keypad = {
-            0x1: False,
-            0x2: False,
-            0x3: False,
-            0xC: False,
+        #self.keypad = {
+        #    0x1: False,
+        #    0x2: False,
+        #    0x3: False,
+        #    0xC: False,
 
-            0x4: False,
-            0x5: False,
-            0x6: False,
-            0xD: False,
+        #    0x4: False,
+        #    0x5: False,
+        #    0x6: False,
+        #    0xD: False,
 
-            0x7: False,
-            0x8: False,
-            0x9: False,
-            0xE: False,
+        #    0x7: False,
+        #    0x8: False,
+        #    0x9: False,
+        #    0xE: False,
 
-            0xA: False,
-            0x0: False,
-            0xB: False,
-            0xF: False,
-        }
+        #    0xA: False,
+        #    0x0: False,
+        #    0xB: False,
+        #    0xF: False,
+        #}
+
+        self.keypress = -1
 
     def increment(self, step=1):
         self.registers['PC'] += step
@@ -106,51 +152,16 @@ class Chip8:
         return self.stack.pop()
     
     def read_keypress(self, key):
-        self.keypad = dict.fromkeys(self.keypad, False)
-
-        if key == ord('1'):
-            self.keypad[0x1] = True
-        elif key == ord('2'):
-            self.keypad[0x2] = True
-        elif key == ord('3'):
-            self.keypad[0x3] = True
-        elif key == ord('4'):
-            self.keypad[0xC] = True
-
-        elif key == ord('q'):
-            self.keypad[0x4] = True
-        elif key == ord('w'):
-            self.keypad[0x5] = True
-        elif key == ord('e'):
-            self.keypad[0x6] = True
-        elif key == ord('r'):
-            self.keypad[0xD] = True
-
-        elif key == ord('a'):
-            self.keypad[0x7] = True
-        elif key == ord('s'):
-            self.keypad[0x8] = True
-        elif key == ord('d'):
-            self.keypad[0x9] = True
-        elif key == ord('f'):
-            self.keypad[0xE] = True
-
-        elif key == ord('z'):
-            self.keypad[0xA] = True
-        elif key == ord('x'):
-            self.keypad[0x0] = True
-        elif key == ord('c'):
-            self.keypad[0xB] = True
-        elif key == ord('v'):
-            self.keypad[0xF] = True
+        if key in KEYMAP:
+            self.keypress = KEYMAP[chr(key)]
 
     def interpret(self):
         while 1:
             #print(self.stack)
             #print(self.registers)
-            #print(f"{self.current():x}")
-            # print(self.keypad)
+            #print(hex(self.current()))
             #print("---")
+
             self.read_keypress(display.getkeypress())
 
             instr = self.current()
@@ -362,13 +373,13 @@ class Chip8:
                 self.increment()
 
                 if self.current() == 0x9E:
-                    if self.keypad[ self.registers['V'][x] ]: # Skip next instruction if key with the value of Vx is pressed.
+                    if self.keypress == self.registers['V'][x]: # Skip next instruction if key with the value of Vx is pressed.
                         self.increment(3)
                     else:
                         self.increment()
 
                 if self.current() == 0xA1:
-                    if not self.keypad[ self.registers['V'][x] ]: # Skip next instruction if key with the value of Vx is not pressed.
+                    if self.keypress != self.registers['V'][x]: # Skip next instruction if key with the value of Vx is not pressed.
                         self.increment(3)
                     else:
                         self.increment()
@@ -389,15 +400,11 @@ class Chip8:
 
                 elif self.current() == 0x1E: # set I = I + Vx
                     self.registers['I'] += self.registers['V'][x]
+
+                elif self.current() == 0x29: # Set I = location of sprite for digit Vx.
+                    if 0x0 <= self.registers['V'][x] <= 0xF:
+                        self.registers['I'] = self.memory[ self.registers['V'][x] * 5 ]
                 
-                elif self.current() == 0x65: # read registers V0-x from memory, starting from location I
-                    for i in range(x+1):
-                        self.registers['V'][i] = self.memory[ self.registers['I'] + i ]
-
-                elif self.current() == 0x55: # save registers V0-x to memory, starting from location I
-                    for i in range(x+1):
-                        self.memory[ self.registers['I'] + i ] = self.registers['V'][i]
-
                 elif self.current() == 0x33: #  Store BCD representation of Vx in memory locations I, I+1, and I+2.
                     val = self.registers['V'][x]
 
@@ -407,11 +414,23 @@ class Chip8:
                     val //= 10
                     self.memory[ self.registers['I'] ] = val % 10
 
+                elif self.current() == 0x55: # save registers V0-x to memory, starting from location I
+                    for i in range(x+1):
+                        self.memory[ self.registers['I'] + i ] = self.registers['V'][i]
+
+                elif self.current() == 0x65: # read registers V0-x from memory, starting from location I
+                    for i in range(x+1):
+                        self.registers['V'][i] = self.memory[ self.registers['I'] + i ]
+
                 self.increment()
 
-
             time.sleep(1 / 60)
+            self.registers['DT'] -= 1
+            self.registers['ST'] -= 1
 
+            #if self.registers['ST'] > 0:
+            #    # play tone
+            #    ...
 
 if __name__ == "__main__":
     rom_path = sys.argv[-1]
