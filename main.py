@@ -150,10 +150,6 @@ class Chip8:
     def pop(self):
         self.registers['SP'] -= 1
         return self.stack.pop()
-    
-    def read_keypress(self, key):
-        if key in KEYMAP:
-            self.keypress = KEYMAP[chr(key)]
 
     def interpret(self):
         while 1:
@@ -161,8 +157,6 @@ class Chip8:
             #print(self.registers)
             #print(hex(self.current()))
             #print("---")
-
-            self.read_keypress(display.getkeypress())
 
             instr = self.current()
 
@@ -372,14 +366,21 @@ class Chip8:
 
                 self.increment()
 
+                key = display.getkeypress()
+                if key > 0 and chr(key) in KEYMAP:
+                    key = KEYMAP[chr(key)]
+                else:
+                    self.increment()
+                    continue
+ 
                 if self.current() == 0x9E:
-                    if self.keypress == self.registers['V'][x]: # Skip next instruction if key with the value of Vx is pressed.
+                    if key == self.registers['V'][x]: # Skip next instruction if key with the value of Vx is pressed.
                         self.increment(3)
                     else:
                         self.increment()
 
-                if self.current() == 0xA1:
-                    if self.keypress != self.registers['V'][x]: # Skip next instruction if key with the value of Vx is not pressed.
+                elif self.current() == 0xA1:
+                    if key != self.registers['V'][x]: # Skip next instruction if key with the value of Vx is not pressed.
                         self.increment(3)
                     else:
                         self.increment()
