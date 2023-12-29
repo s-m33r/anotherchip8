@@ -1,6 +1,7 @@
 import sys
 import curses
 import time
+import random
 
 
 class Display:
@@ -10,6 +11,7 @@ class Display:
         curses.cbreak()
         self.stdscr.keypad(True)
         curses.curs_set(0)
+        self.stdscr.nodelay(True)
 
     def draw(self, sprite, y, x):
         drawing = [f"{line:#010b}"[2:] for line in sprite]
@@ -22,6 +24,9 @@ class Display:
     def clear(self):
         self.stdscr.clear()
         self.stdscr.refresh()
+
+    def getkeypress(self):
+        return self.stdscr.getch()
 
     def __del__(self):
         curses.nocbreak()
@@ -63,6 +68,28 @@ class Chip8:
             'ST': 0
         }
 
+        self.keypad = {
+            0x1: False,
+            0x2: False,
+            0x3: False,
+            0xC: False,
+
+            0x4: False,
+            0x5: False,
+            0x6: False,
+            0xD: False,
+
+            0x7: False,
+            0x8: False,
+            0x9: False,
+            0xE: False,
+
+            0xA: False,
+            0x0: False,
+            0xB: False,
+            0xF: False,
+        }
+
     def increment(self, step=1):
         self.registers['PC'] += step
 
@@ -76,13 +103,54 @@ class Chip8:
     def pop(self):
         self.registers['SP'] -= 1
         return self.stack.pop()
+    
+    def read_keypress(self, key):
+        self.keypad = dict.fromkeys(self.keypad, False)
+
+        if key == ord('1'):
+            self.keypad[0x1] = True
+        elif key == ord('2'):
+            self.keypad[0x2] = True
+        elif key == ord('3'):
+            self.keypad[0x3] = True
+        elif key == ord('4'):
+            self.keypad[0xC] = True
+
+        elif key == ord('q'):
+            self.keypad[0x4] = True
+        elif key == ord('w'):
+            self.keypad[0x5] = True
+        elif key == ord('e'):
+            self.keypad[0x6] = True
+        elif key == ord('r'):
+            self.keypad[0xD] = True
+
+        elif key == ord('a'):
+            self.keypad[0x7] = True
+        elif key == ord('s'):
+            self.keypad[0x8] = True
+        elif key == ord('d'):
+            self.keypad[0x9] = True
+        elif key == ord('f'):
+            self.keypad[0xE] = True
+
+        elif key == ord('z'):
+            self.keypad[0xA] = True
+        elif key == ord('x'):
+            self.keypad[0x0] = True
+        elif key == ord('c'):
+            self.keypad[0xB] = True
+        elif key == ord('v'):
+            self.keypad[0xF] = True
 
     def interpret(self):
         while 1:
             #print(self.stack)
             #print(self.registers)
             #print(f"{self.current():x}")
+            # print(self.keypad)
             #print("---")
+            self.read_keypress(display.getkeypress())
 
             instr = self.current()
 
@@ -190,31 +258,31 @@ class Chip8:
                 Vy = self.registers['V'][y]
 
                 match mode:
-                    case 0:
+                    case 0x0:
                         self.registers['V'][x] = Vy
-                    case 1:
+                    case 0x1:
                         self.registers['V'][x] = Vx | Vy
-                    case 2:
+                    case 0x2:
                         self.registers['V'][x] = Vx & Vy
-                    case 3:
+                    case 0x3:
                         self.registers['V'][x] = Vx ^ Vy
-                    case 4:
+                    case 0x4:
                         result = Vx + Vy
                         self.registers['V'][x] = result & 0b11111111
                         if result > 255:
                             self.registers['V'][0xF] = 1
                         else:
                             self.registers['V'][0xF] = 0
-                    case 5:
+                    case 0x5:
                         self.registers['V'][x] = (Vx - Vy) & 0b11111111
                         if Vx > Vy:
                             self.registers['V'][0xF] = 1
                         else:
                             self.registers['V'][0xF] = 0
-                    case 6:
+                    case 0x6:
                         self.registers['V'][x] = Vx >> 1
                         self.registers['V'][0xF] = Vx & 0x1
-                    case 7:
+                    case 0x7:
                         self.registers['V'][x] = (Vy - Vx) & 0b11111111
                         if Vy > Vx:
                             self.registers['V'][0xF] = 1
@@ -238,13 +306,35 @@ class Chip8:
                 else:
                     self.increment()
 
-            elif instr >> 4 == 0xA:
+            elif instr >> 4 == 0xA: # Set I = nnn.
                 x1 = instr & 0xF
 
                 self.increment()
                 x2 = self.current()
 
                 self.registers['I'] = (x1 << 8) | x2
+
+                self.increment()
+
+            elif instr >> 4 == 0xB: #  Jump to location nnn + V0.
+                x1 = instr & 0xF
+
+                self.increment()
+                x2 = self.current()
+
+                nnn = (x1 << 8) | x2
+
+                self.registers['PC'] = nnn + self.registers['V'][0]
+
+                self.increment()
+
+            elif instr >> 4 == 0xC: #  Set Vx = random byte AND kk.
+                x = instr & 0xF
+
+                self.increment()
+                kk = self.current()
+
+                self.registers['V'][x] = random.randint(0, 255) & kk
 
                 self.increment()
 
@@ -264,6 +354,23 @@ class Chip8:
                 self.display.draw(sprite, y, x)
 
                 self.increment()
+
+            elif instr >> 4 == 0xE:
+                x = instr & 0xF
+
+                self.increment()
+
+                if self.current() == 0x9E:
+                    if self.keypad[ self.registers['V'][x] ]: # Skip next instruction if key with the value of Vx is pressed.
+                        self.increment(3)
+                    else:
+                        self.increment()
+
+                if self.current() == 0xA1:
+                    if not self.keypad[ self.registers['V'][x] ]: # Skip next instruction if key with the value of Vx is not pressed.
+                        self.increment(3)
+                    else:
+                        self.increment()
 
             elif instr >> 4 == 0xF:
                 x = instr & 0xF
