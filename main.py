@@ -15,7 +15,7 @@ class Display:
         drawing = [f"{line:#010b}"[2:] for line in sprite]
 
         for i, line in enumerate(drawing):
-            self.stdscr.addstr(y+i, x, line.replace('1','█').replace('0',' '))
+            self.stdscr.addnstr(y+i, x, line.replace('1','█').replace('0',' ').rstrip(), 8)
 
         self.stdscr.refresh()
 
@@ -29,22 +29,20 @@ class Display:
         curses.echo()
         curses.endwin()
 
-'''
-class Display:
-    def __init__(self):
-        ...
-
-    def draw(self, sprite, y, x):
-        print(y, x)
-        drawing = [f"{line:#010b}"[2:] for line in sprite]
-
-        for line in drawing:
-            print(line.replace('1','█').replace('0',' '))
-        print()
-
-    def clear(self):
-        print("clear screen")
-'''
+#class Display:
+#    def __init__(self):
+#        ...
+#
+#    def draw(self, sprite, y, x):
+#        print(y, x)
+#        drawing = [f"{line:#010b}"[2:] for line in sprite]
+#
+#        for line in drawing:
+#            print(line.replace('1','█').replace('0',' '))
+#        print()
+#
+#    def clear(self):
+#        print("clear screen")
 
 
 class Chip8:
@@ -53,18 +51,17 @@ class Chip8:
         for i, byte in enumerate(program):
             self.memory[0x200 + i] = byte
 
-        print(self.memory)
+        self.display = display
 
         self.stack = []
-
         self.registers = {
             'V': [0]*16,
             'PC': 0x200,
             'I': 0,
-            'SP': -1
+            'SP': -1,
+            'DT': 0,
+            'ST': 0
         }
-
-        self.display = display
 
     def increment(self, step=1):
         self.registers['PC'] += step
@@ -284,7 +281,7 @@ class Chip8:
                 elif self.current() == 0x1E: # set I = I + Vx
                     self.registers['I'] += self.registers['V'][x]
 
-                elif self.current() == 0x33:
+                elif self.current() == 0x33: #  Store BCD representation of Vx in memory locations I, I+1, and I+2.
                     val = self.registers['V'][x]
 
                     self.memory[ self.registers['I'] + 2 ] = val % 10
@@ -294,9 +291,6 @@ class Chip8:
                     self.memory[ self.registers['I'] ] = val % 10
 
                 self.increment()
-
-
-            time.sleep(0.02)
 
 
 if __name__ == "__main__":
