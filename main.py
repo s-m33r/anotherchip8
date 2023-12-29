@@ -2,6 +2,7 @@ import sys
 import curses
 import time
 import random
+import os
 
 
 class Display:
@@ -290,7 +291,7 @@ class Chip8:
                             self.registers['V'][0xF] = 0
                     case 0xE:
                         self.registers['V'][x] = (Vx << 1) & 0b11111111
-                        self.registers['V'][0xF] = Vx & 0x80
+                        self.registers['V'][0xF] = Vx >> 7
 
                 self.increment()
 
@@ -376,17 +377,26 @@ class Chip8:
                 x = instr & 0xF
 
                 self.increment()
+
+                if self.current() == 0x7: # Set Vx = delay timer value.
+                    self.registers['V'][x] = self.registers['DT']
+
+                elif self.current() == 0x15: # Set delay timer = Vx.
+                    self.registers['DT'] = self.registers['V'][x]
+
+                elif self.current() == 0x18: # Set sound timer = Vx.
+                    self.registers['ST'] = self.registers['V'][x]
+
+                elif self.current() == 0x1E: # set I = I + Vx
+                    self.registers['I'] += self.registers['V'][x]
                 
-                if self.current() == 0x65: # read registers V0-x from memory, starting from location I
+                elif self.current() == 0x65: # read registers V0-x from memory, starting from location I
                     for i in range(x+1):
                         self.registers['V'][i] = self.memory[ self.registers['I'] + i ]
 
                 elif self.current() == 0x55: # save registers V0-x to memory, starting from location I
                     for i in range(x+1):
                         self.memory[ self.registers['I'] + i ] = self.registers['V'][i]
-
-                elif self.current() == 0x1E: # set I = I + Vx
-                    self.registers['I'] += self.registers['V'][x]
 
                 elif self.current() == 0x33: #  Store BCD representation of Vx in memory locations I, I+1, and I+2.
                     val = self.registers['V'][x]
@@ -398,6 +408,9 @@ class Chip8:
                     self.memory[ self.registers['I'] ] = val % 10
 
                 self.increment()
+
+
+            time.sleep(1 / 60)
 
 
 if __name__ == "__main__":
