@@ -426,9 +426,8 @@ class Chip8:
                     self.registers['V'][x] = self.registers['DT']
 
                 elif self.current() == 0xA: # Wait for a key press, store the value of the key in Vx.
-                    #print("waiting for input")
                     key = display.getkeypress()
-                    while key == -1:
+                    while key == -1 or chr(key) not in KEYMAP:
                         key = display.getkeypress()
 
                     self.registers['V'][x] = KEYMAP[chr(key)]
@@ -445,7 +444,7 @@ class Chip8:
 
                 elif self.current() == 0x29: # Set I = location of sprite for digit Vx.
                     if 0x0 <= self.registers['V'][x] <= 0xF:
-                        self.registers['I'] = self.memory[ self.registers['V'][x] * 5 ]
+                        self.registers['I'] = self.registers['V'][x] * 5
                 
                 elif self.current() == 0x33: #  Store BCD representation of Vx in memory locations I, I+1, and I+2.
                     val = self.registers['V'][x]
