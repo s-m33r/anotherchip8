@@ -55,17 +55,43 @@ class Display:
         curses.curs_set(0)
         self.stdscr.nodelay(True)
 
+        self.bitmap = [[0]*64 for _ in range(32)]
+
     def draw(self, sprite, y, x):
         drawing = [f"{line:#010b}"[2:] for line in sprite]
 
+        overwrite_flag = False
+
         for i, line in enumerate(drawing):
-            self.stdscr.addnstr(y+i, x, line.replace('1','█').replace('0',' ').rstrip(), 8)
+            for j, ch in enumerate(line):
+                X, Y = x+j, y+i
+
+                if Y > 31:
+                    Y -= 32
+                elif Y < 0:
+                    Y += 32
+                    
+                if X > 63:
+                    X -= 64
+                elif X < 0:
+                    X += 64
+
+                # sprites are XORd with existing pixel
+                pix = int(ch) ^ self.bitmap[Y][X]
+
+                if self.bitmap[Y][X] == 1 and pix == 0:
+                    overwrite_flag = True
+
+                self.bitmap[Y][X] = pix
+
+                self.stdscr.addnstr(Y, X, '█' if pix else ' ', 1)
 
         self.stdscr.refresh()
+        return overwrite_flag
 
     def clear(self):
+        self.bitmap = [[0]*64 for _ in range(32)]
         self.stdscr.clear()
-        self.stdscr.refresh()
 
     def getkeypress(self):
         return self.stdscr.getch()
@@ -357,7 +383,13 @@ class Chip8:
                 sprite = self.memory[self.registers['I'] : self.registers['I'] + n]
 
                 # draw sprite at given coordinates
-                self.display.draw(sprite, y, x)
+                overwrite_flag = self.display.draw(sprite, y, x)
+
+                # set collision bit
+                if overwrite_flag:
+                    self.registers['V'][0xF] = 0x1
+                else:
+                    self.registers['V'][0xF] = 0x0
 
                 self.increment()
 
@@ -393,6 +425,15 @@ class Chip8:
                 if self.current() == 0x7: # Set Vx = delay timer value.
                     self.registers['V'][x] = self.registers['DT']
 
+                elif self.current() == 0xA: # Wait for a key press, store the value of the key in Vx.
+                    #print("waiting for input")
+                    key = display.getkeypress()
+                    while key == -1:
+                        key = display.getkeypress()
+
+                    self.registers['V'][x] = KEYMAP[chr(key)]
+                    #os.system(f"notify-send {KEYMAP[chr(key)]}")
+
                 elif self.current() == 0x15: # Set delay timer = Vx.
                     self.registers['DT'] = self.registers['V'][x]
 
@@ -425,13 +466,16 @@ class Chip8:
 
                 self.increment()
 
+            else:
+                self.increment()
+
             time.sleep(1 / 60)
             self.registers['DT'] -= 1
             self.registers['ST'] -= 1
 
-            #if self.registers['ST'] > 0:
-            #    # play tone
-            #    ...
+            if self.registers['ST'] > 0:
+                # play tone
+                ...
 
 if __name__ == "__main__":
     rom_path = sys.argv[-1]
