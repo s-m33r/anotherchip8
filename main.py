@@ -158,13 +158,16 @@ class Chip8:
                     pygame.quit()
                     sys.exit(0)
                 elif event.type == pygame.KEYDOWN:
-                    if event.key in KEYMAP:
-                        self.keypress = KEYMAP[event.key]
-                    elif event.key == pygame.K_SPACE:
+                    if event.key == pygame.K_SPACE:
                         paused = not paused
 
             if paused:
                 continue
+
+            keys = pygame.key.get_pressed()
+            for key in KEYMAP:
+                if keys[key]:
+                    self.keypress = KEYMAP[key]
 
             instr = self.current()
 
@@ -387,12 +390,14 @@ class Chip8:
                 if self.current() == 0x9E:
                     if self.keypress == self.registers['V'][x]: # Skip next instruction if key with the value of Vx is pressed.
                         self.increment(3)
+                        self.keypress = -1
                     else:
                         self.increment()
 
                 elif self.current() == 0xA1:
                     if self.keypress != self.registers['V'][x]: # Skip next instruction if key with the value of Vx is not pressed.
                         self.increment(3)
+                        self.keypress = -1
                     else:
                         self.increment()
 
@@ -407,12 +412,18 @@ class Chip8:
                 elif self.current() == 0xA: # Wait for a key press, store the value of the key in Vx.
 
                     key = -1
-                    while 1:
-                        key = self.getkeypress()
+
+                    waiting = True
+                    while waiting:
+                        for event in pygame.event.get():
+                            if event.type == pygame.QUIT:
+                                pygame.quit()
+                                sys.exit(0)
+                            elif event.type == pygame.KEYDOWN:
+                                if event.key in KEYMAP:
+                                    key = KEYMAP[event.key]
+                                    waiting = False
                         time.sleep(1/60)
-                        if key > 0:
-                            break
-                    print(key)
 
                     self.registers['V'][x] = key
 
