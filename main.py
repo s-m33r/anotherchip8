@@ -3,6 +3,7 @@ import curses
 import time
 import random
 import threading
+import pygame
 
 FONT = [
     0xF0, 0x90, 0x90, 0x90, 0xF0, # 0
@@ -24,44 +25,34 @@ FONT = [
 ]
 
 KEYMAP = {
-    '1': 0x1,
-    '2': 0x2,
-    '3': 0x3,
-    '4': 0xC,
-
-    'q': 0x4,
-    'w': 0x5,
-    'e': 0x6,
-    'r': 0xD,
-
-    'a': 0x7,
-    's': 0x8,
-    'd': 0x9,
-    'f': 0xE,
-
-    'z': 0xA,
-    'x': 0x0,
-    'c': 0xB,
-    'v': 0xF,
+    pygame.K_1: 0x1, pygame.K_2: 0x2, pygame.K_3: 0x3, pygame.K_4: 0xC,
+    pygame.K_q: 0x4, pygame.K_w: 0x5, pygame.K_e: 0x6, pygame.K_r: 0xD,
+    pygame.K_a: 0x7, pygame.K_s: 0x8, pygame.K_d: 0x9, pygame.K_f: 0xE,
+    pygame.K_z: 0xA, pygame.K_x: 0x0, pygame.K_c: 0xB, pygame.K_v: 0xF
 }
-
 
 class Display:
     def __init__(self):
-        self.stdscr = curses.initscr()
-        curses.noecho()
-        curses.cbreak()
-        self.stdscr.keypad(True)
-        curses.curs_set(0)
-        self.stdscr.nodelay(True)
-
         self.bitmap = [[0]*64 for _ in range(32)]
-    
+
+        # PyGame setup
+        self.WIDTH, self.HEIGHT = 640, 320
+        self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
+        pygame.display.set_caption("another CHIP-8")
+
+        self.colors = {}
+        self.colors['black'] = (13, 19, 42) #0d132a
+        self.colors['white'] = (173, 195, 232) #adc3e8
+
+        self.screen.fill(self.colors['black'])
+
     def update_display(self):
+        self.screen.fill(self.colors['black'])
         for Y, line in enumerate(self.bitmap):
             for X, pix in enumerate(line):
-                self.stdscr.addnstr(Y, X, '█' if pix else ' ', 1)
-        self.stdscr.refresh()
+                if pix:
+                    pygame.draw.rect(self.screen, self.colors['white'], (X * 10, Y * 10, 10, 10))
+        pygame.display.flip()
 
     def draw(self, sprite, y, x):
         drawing = [f"{line:#010b}"[2:] for line in sprite]
@@ -98,31 +89,6 @@ class Display:
         self.bitmap = [[0]*64 for _ in range(32)]
         self.update_display()
 
-    def getkeypress(self):
-        time.sleep(0.05)
-        return self.stdscr.getch()
-
-    def __del__(self):
-        curses.nocbreak()
-        self.stdscr.keypad(False)
-        curses.echo()
-        curses.endwin()
-
-#class Display:
-#    def __init__(self):
-#        ...
-#
-#    def draw(self, sprite, y, x):
-#        print(y, x)
-#        drawing = [f"{line:#010b}"[2:] for line in sprite]
-#
-#        for line in drawing:
-#            print(line.replace('1','█').replace('0',' '))
-#        print()
-#
-#    def clear(self):
-#        print("clear screen")
-
 
 class Chip8:
     def __init__(self, program, display):
@@ -145,10 +111,10 @@ class Chip8:
             'ST': 0
         }
 
+        self.keypress = -1
+
         self.decrement_thread = threading.Thread(target=self.__decrement_timers, daemon=True)
         self.decrement_thread.start()
-
-        self.keypress = -1
 
     def __decrement_timers(self):
         if self.registers['DT'] > 0:
@@ -170,13 +136,25 @@ class Chip8:
     def pop(self):
         self.registers['SP'] -= 1
         return self.stack.pop()
+    
+    def getkeypress(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit(0)
+            elif event.type == pygame.KEYDOWN:
+                if event.key in KEYMAP:
+                    return KEYMAP[event.key]
+                else:
+                    return -1
+        return -1
 
     def interpret(self):
-        while 1:
-            #print(self.stack)
-            #print(self.registers)
-            #print(hex(self.current()))
-            #print("---")
+        running = True
+        while running:
+
+            pygame.event.pump()
+            self.keypress = self.getkeypress()
 
             instr = self.current()
 
@@ -392,21 +370,18 @@ class Chip8:
 
                 self.increment()
 
-                key = self.display.getkeypress()
-                if key > 0 and chr(key) in KEYMAP:
-                    key = KEYMAP[chr(key)]
-                else:
+                if self.keypress < 0:
                     self.increment()
                     continue
- 
+
                 if self.current() == 0x9E:
-                    if key == self.registers['V'][x]: # Skip next instruction if key with the value of Vx is pressed.
+                    if self.keypress == self.registers['V'][x]: # Skip next instruction if key with the value of Vx is pressed.
                         self.increment(3)
                     else:
                         self.increment()
 
                 elif self.current() == 0xA1:
-                    if key != self.registers['V'][x]: # Skip next instruction if key with the value of Vx is not pressed.
+                    if self.keypress != self.registers['V'][x]: # Skip next instruction if key with the value of Vx is not pressed.
                         self.increment(3)
                     else:
                         self.increment()
@@ -420,11 +395,16 @@ class Chip8:
                     self.registers['V'][x] = self.registers['DT']
 
                 elif self.current() == 0xA: # Wait for a key press, store the value of the key in Vx.
-                    key = self.display.getkeypress()
-                    while key == -1 or chr(key) not in KEYMAP:
-                        key = self.keypress
 
-                    self.registers['V'][x] = KEYMAP[chr(key)]
+                    key = -1
+                    while 1:
+                        key = self.getkeypress()
+                        time.sleep(1/60)
+                        if key > 0:
+                            break
+                    print(key)
+
+                    self.registers['V'][x] = key
 
                 elif self.current() == 0x15: # Set delay timer = Vx.
                     self.registers['DT'] = self.registers['V'][x]
@@ -458,6 +438,9 @@ class Chip8:
 
                 self.increment()
 
+            else: # for debugging only
+                self.increment()
+
             time.sleep(1 / 300)
             self.registers['DT'] -= 1
             self.registers['ST'] -= 1
@@ -466,7 +449,10 @@ class Chip8:
                 # play tone
                 ...
 
+
 if __name__ == "__main__":
+    pygame.init()
+
     rom_path = sys.argv[-1]
 
     program = None
@@ -477,4 +463,6 @@ if __name__ == "__main__":
 
     chip8 = Chip8(program, display)
     chip8.interpret()
+
+    pygame.quit()
 
