@@ -2,7 +2,7 @@ import sys
 import curses
 import time
 import random
-import os
+import threading
 
 FONT = [
     0xF0, 0x90, 0x90, 0x90, 0xF0, # 0
@@ -56,6 +56,12 @@ class Display:
         self.stdscr.nodelay(True)
 
         self.bitmap = [[0]*64 for _ in range(32)]
+    
+    def update_display(self):
+        for Y, line in enumerate(self.bitmap):
+            for X, pix in enumerate(line):
+                self.stdscr.addnstr(Y, X, '█' if pix else ' ', 1)
+        self.stdscr.refresh()
 
     def draw(self, sprite, y, x):
         drawing = [f"{line:#010b}"[2:] for line in sprite]
@@ -84,16 +90,16 @@ class Display:
 
                 self.bitmap[Y][X] = pix
 
-                self.stdscr.addnstr(Y, X, '█' if pix else ' ', 1)
+        self.update_display()
 
-        self.stdscr.refresh()
         return overwrite_flag
 
     def clear(self):
         self.bitmap = [[0]*64 for _ in range(32)]
-        self.stdscr.clear()
+        self.update_display()
 
     def getkeypress(self):
+        time.sleep(0.05)
         return self.stdscr.getch()
 
     def __del__(self):
@@ -139,29 +145,17 @@ class Chip8:
             'ST': 0
         }
 
-        #self.keypad = {
-        #    0x1: False,
-        #    0x2: False,
-        #    0x3: False,
-        #    0xC: False,
-
-        #    0x4: False,
-        #    0x5: False,
-        #    0x6: False,
-        #    0xD: False,
-
-        #    0x7: False,
-        #    0x8: False,
-        #    0x9: False,
-        #    0xE: False,
-
-        #    0xA: False,
-        #    0x0: False,
-        #    0xB: False,
-        #    0xF: False,
-        #}
+        self.decrement_thread = threading.Thread(target=self.__decrement_timers, daemon=True)
+        self.decrement_thread.start()
 
         self.keypress = -1
+
+    def __decrement_timers(self):
+        if self.registers['DT'] > 0:
+            self.registers['DT'] -= 1
+        if self.registers['ST'] > 0:
+            self.registers['ST'] -= 1
+        time.sleep(1/60)
 
     def increment(self, step=1):
         self.registers['PC'] += step
@@ -312,7 +306,7 @@ class Chip8:
                         else:
                             self.registers['V'][0xF] = 0
                     case 0x6:
-                        self.registers['V'][x] = Vx >> 1
+                        self.registers['V'][x] = (Vx >> 1) & 0b11111111
                         self.registers['V'][0xF] = Vx & 0x1
                     case 0x7:
                         self.registers['V'][x] = (Vy - Vx) & 0b11111111
@@ -398,7 +392,7 @@ class Chip8:
 
                 self.increment()
 
-                key = display.getkeypress()
+                key = self.display.getkeypress()
                 if key > 0 and chr(key) in KEYMAP:
                     key = KEYMAP[chr(key)]
                 else:
@@ -426,12 +420,11 @@ class Chip8:
                     self.registers['V'][x] = self.registers['DT']
 
                 elif self.current() == 0xA: # Wait for a key press, store the value of the key in Vx.
-                    key = display.getkeypress()
+                    key = self.display.getkeypress()
                     while key == -1 or chr(key) not in KEYMAP:
-                        key = display.getkeypress()
+                        key = self.keypress
 
                     self.registers['V'][x] = KEYMAP[chr(key)]
-                    #os.system(f"notify-send {KEYMAP[chr(key)]}")
 
                 elif self.current() == 0x15: # Set delay timer = Vx.
                     self.registers['DT'] = self.registers['V'][x]
@@ -465,10 +458,7 @@ class Chip8:
 
                 self.increment()
 
-            else:
-                self.increment()
-
-            time.sleep(1 / 60)
+            time.sleep(1 / 300)
             self.registers['DT'] -= 1
             self.registers['ST'] -= 1
 
