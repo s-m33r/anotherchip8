@@ -150,11 +150,21 @@ class Chip8:
         return -1
 
     def interpret(self):
-        running = True
-        while running:
+        paused = False
 
-            pygame.event.pump()
-            self.keypress = self.getkeypress()
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit(0)
+                elif event.type == pygame.KEYDOWN:
+                    if event.key in KEYMAP:
+                        self.keypress = KEYMAP[event.key]
+                    elif event.key == pygame.K_SPACE:
+                        paused = not paused
+
+            if paused:
+                continue
 
             instr = self.current()
 
