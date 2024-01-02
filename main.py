@@ -462,7 +462,7 @@ class Chip8:
             else: # for debugging only
                 self.increment()
 
-            time.sleep(1 / 300)
+            time.sleep(1 / 400)
             self.registers['DT'] -= 1
             self.registers['ST'] -= 1
 
