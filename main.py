@@ -64,12 +64,12 @@ class Display:
                 X, Y = x+j, y+i
 
                 if Y > 31:
-                    Y -= 32
+                    Y %= 32
                 elif Y < 0:
                     Y += 32
                     
                 if X > 63:
-                    X -= 64
+                    X %= 64
                 elif X < 0:
                     X += 64
 
@@ -113,9 +113,6 @@ class Chip8:
 
         self.keypress = -1
 
-        self.decrement_thread = threading.Thread(target=self.__decrement_timers, daemon=True)
-        self.decrement_thread.start()
-
     def __decrement_timers(self):
         if self.registers['DT'] > 0:
             self.registers['DT'] -= 1
@@ -151,6 +148,7 @@ class Chip8:
 
     def interpret(self):
         paused = False
+        T = 0
 
         while True:
             for event in pygame.event.get():
@@ -462,9 +460,12 @@ class Chip8:
             else: # for debugging only
                 self.increment()
 
-            time.sleep(1 / 400)
-            self.registers['DT'] -= 1
-            self.registers['ST'] -= 1
+            time.sleep(1 / 600)
+            T += 1
+
+            if T % 10 == 0:
+                self.__decrement_timers()
+                T = 0
 
             if self.registers['ST'] > 0:
                 # play tone
