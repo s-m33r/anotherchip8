@@ -141,18 +141,6 @@ class Chip8:
         self.registers['SP'] -= 1
         return self.stack.pop()
     
-    def getkeypress(self):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit(0)
-            elif event.type == pygame.KEYDOWN:
-                if event.key in KEYMAP:
-                    return KEYMAP[event.key]
-                else:
-                    return -1
-        return -1
-
     def interpret(self):
         paused = False
         T = 0
