@@ -91,7 +91,7 @@ class Display:
 
 
 class Chip8:
-    def __init__(self, program, display):
+    def __init__(self, program, display, SPEED: int):
         self.memory = [0] * 4096
         for i, byte in enumerate(program):
             self.memory[0x200 + i] = byte
@@ -113,12 +113,14 @@ class Chip8:
 
         self.keypress = -1
 
+        self.DELAY = 1 / int(SPEED)
+        self.TIMER_DECREMENT_THRESHOLD = int( SPEED / 60 )
+
     def __decrement_timers(self):
         if self.registers['DT'] > 0:
             self.registers['DT'] -= 1
         if self.registers['ST'] > 0:
             self.registers['ST'] -= 1
-        time.sleep(1/60)
 
     def increment(self, step=1):
         self.registers['PC'] += step
@@ -460,10 +462,10 @@ class Chip8:
             else: # for debugging only
                 self.increment()
 
-            time.sleep(1 / 600)
+            time.sleep(self.DELAY)
             T += 1
 
-            if T % 10 == 0:
+            if T % self.TIMER_DECREMENT_THRESHOLD == 0:
                 self.__decrement_timers()
                 T = 0
 
@@ -483,7 +485,7 @@ if __name__ == "__main__":
 
     display = Display()
 
-    chip8 = Chip8(program, display)
+    chip8 = Chip8(program, display, 500) # initialize CHIP-8 emulator at 500 Hz
     chip8.interpret()
 
     pygame.quit()
