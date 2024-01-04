@@ -102,7 +102,7 @@ class Display:
 
 class Chip8:
     def __init__(self, program, display, SPEED: int):
-        self.memory = [0] * 4096
+        self.memory = [0 for _ in range(4096)]
         for i, byte in enumerate(program):
             self.memory[0x200 + i] = byte
 
@@ -457,9 +457,6 @@ class Chip8:
                     for i in range(x+1):
                         self.registers['V'][i] = self.memory[ self.registers['I'] + i ]
 
-                self.increment()
-
-            else: # for debugging only
                 self.increment()
 
             time.sleep(self.DELAY)
