@@ -1,8 +1,6 @@
 import sys
-import curses
 import time
 import random
-import threading
 import pygame
 
 FONT = [
