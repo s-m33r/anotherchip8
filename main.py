@@ -29,6 +29,13 @@ KEYMAP = {
     pygame.K_z: 0xA, pygame.K_x: 0x0, pygame.K_c: 0xB, pygame.K_v: 0xF
 }
 
+COLORS = {
+    "nok1": [(67,82,61), (199,240,216)],
+    "nok2": [(43,63,9),  (155,199,0)],
+    "nok3": [(26,25,20), (135,145,136)],
+    "blue": [(13, 19, 42), (173, 195, 232)],
+}
+
 class Display:
     def __init__(self):
         self.bitmap = [[0]*64 for _ in range(32)]
@@ -39,8 +46,8 @@ class Display:
         pygame.display.set_caption("another CHIP-8")
 
         self.colors = {}
-        self.colors['black'] = (13, 19, 42) #0d132a
-        self.colors['white'] = (173, 195, 232) #adc3e8
+        self.colors['black'] = COLORS["nok2"][0]
+        self.colors['white'] = COLORS["nok2"][1]
 
         self.screen.fill(self.colors['black'])
 
