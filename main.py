@@ -1,6 +1,7 @@
 import sys
 import time
 import random
+from datetime import datetime
 import pygame
 
 FONT = [
@@ -94,6 +95,10 @@ class Display:
         self.bitmap = [[0]*64 for _ in range(32)]
         self.update_display()
 
+    def save_screenshot(self):
+        date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        pygame.image.save(self.screen, f"{date}_anotherchip8.png")
+
 
 class Chip8:
     def __init__(self, program, display, SPEED: int):
@@ -153,6 +158,8 @@ class Chip8:
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
                         paused = not paused
+                    if event.key == pygame.K_p:
+                        display.save_screenshot()
 
             if paused:
                 continue
