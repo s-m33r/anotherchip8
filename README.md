@@ -1,5 +1,18 @@
 # another CHIP-8 emulator
+
+![Demo - Octojam 1 title ROM](screenshots/octojam1-title.png)
 ![Demo- "Breakout (Brix hack)" by David Winter](screenshots/breakout1.png)
+
+## how to use
+
+```
+git clone https://github.com/s-m33r/anotherchip8.git
+```
+
+```
+pip install -r requirements.txt
+python main.py <path to ROM>
+```
 
 ## helpful resources
 - [Cowgod's Chip-8 Technical Reference](http://devernay.free.fr/hacks/chip8/C8TECH10.HTM)
