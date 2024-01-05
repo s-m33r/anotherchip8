@@ -1,7 +1,6 @@
 # another CHIP-8 emulator
 
 ![Demo - Octojam 1 title ROM](screenshots/octojam1-title.png)
-![Demo- "Breakout (Brix hack)" by David Winter](screenshots/breakout1.png)
 
 ## how to use
 
