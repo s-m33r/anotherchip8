@@ -5,12 +5,12 @@
 ## how to use
 
 ```
-git clone https://github.com/s-m33r/anotherchip8.git
+$ git clone https://github.com/s-m33r/anotherchip8.git
 ```
 
 ```
-pip install -r requirements.txt
-python main.py <path to ROM>
+(venv) $ pip install -r requirements.txt
+(venv) $ python main.py <path to ROM>
 ```
 
 ## helpful resources
