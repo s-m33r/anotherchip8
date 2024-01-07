@@ -53,11 +53,11 @@ class Display:
         self.screen.fill(self.colors['black'])
 
     def update_display(self):
-        self.screen.fill(self.colors['black'])
+        pygame.draw.rect(self.screen, self.colors['black'], (0, 0, 64 * 8, 32 * 8))
         for Y, line in enumerate(self.bitmap):
             for X, pix in enumerate(line):
                 if pix:
-                    pygame.draw.rect(self.screen, self.colors['white'], (X * 10, Y * 10, 10, 10))
+                    pygame.draw.rect(self.screen, self.colors['white'], (X * 8, Y * 8, 8, 8))
         pygame.display.flip()
 
     def draw(self, sprite, y, x):
