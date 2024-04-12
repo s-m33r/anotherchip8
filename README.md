@@ -1,6 +1,7 @@
 # another CHIP-8 emulator
 
-![Demo - Octojam 1 title ROM](screenshots/octojam1-title.png)
+Demo:  
+<video src='https://github.com/s-m33r/anotherchip8/assets/112017240/a8e1de96-1ab5-4eb8-b8c8-73163988a19d' width=180></video>
 
 ## how to use
 
